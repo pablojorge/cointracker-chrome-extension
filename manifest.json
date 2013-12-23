@@ -1,8 +1,9 @@
 {
 	"name": "CoinTracker",
-	"version": "1.0.2",
+	"version": "1.0.3",
 	"manifest_version" : 2,
 	"description": "Up to the Minute Bitcoin Prices",
+	"minimum_chrome_version": "22.0",
 	"background" : {
 		"scripts": ["scripts/background.js"],
 	    "persistent": false
