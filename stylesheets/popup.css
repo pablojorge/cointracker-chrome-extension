@@ -1,0 +1,36 @@
+body {
+	width: 360px;
+}
+
+h1.title {
+	margin-top: 15px;
+	font-size: 18px;
+	font-weight: 300;
+}
+
+h1.title span.text-muted {
+	font-size: 12px;
+	font-weight: 400;
+}
+
+#prices h2, #prices h3 {
+	margin: 5px 0 0 0;
+}
+
+#prices h3.main {
+	font-weight: 400;
+}
+
+#price-cluster, #price-loading {
+	min-height: 20px;
+	max-height: 70px;
+}
+
+#price-loading .progress-bar {
+	width: 100%;
+}
+
+/* UTILITIES */
+.hidden {
+	display: none;
+}

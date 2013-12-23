@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>CoinTracker Options</title>
+        <meta charset="utf-8"/>
+        <meta name="description" content="Change your CoinTracker options." />
+        <meta name="keywords" content="chrome-extensions,cointracker,bitcoin,coinbase" />
+        <meta name="author" content="Last Commit" />
+        <link rel="shortcut icon" href="../icons/favicon.png"> 
+        <link rel="stylesheet" href="css/chrome_shared.css"/>
+    </head>
+    <body>
+        <div class="main-container">
+            <header>
+                <h1><img alt="CoinTracker Logo" src="../icons/48.png" class="logo" /> CoinTracker Options</h1>
+            </header>
+
+            <section id="settings" class="page">
+                <h1>Settings</h1>
+                <hr/>
+                <form id="user-settings">
+                    <h3>Update Frequency</h3>
+                    <p>How often CoinTracker checks the current price.</p>
+                    <div class="radio">
+                        <div>
+                            <input id="poll-frequency1" type="radio" name="poll-frequency" value="1" >
+                            <label for="poll-frequency1">1 Minute</label>
+                        </div>
+                        <div>
+                            <input id="poll-frequency5" type="radio" name="poll-frequency" value="5" >
+                            <label for="poll-frequency5">5 Minutes</label>
+                        </div>
+                        <div>
+                            <input id="poll-frequency10" type="radio" name="poll-frequency" value="10" >
+                            <label for="poll-frequency10">10 Minutes</label>
+                        </div>
+                        <div>
+                            <input id="poll-frequency15" type="radio" name="poll-frequency" value="15" >
+                            <label for="poll-frequency15">15 Minutes</label>
+                        </div>
+                    </div>
+
+                    <h3>Buy/Sell Amount</h3>
+                    <div class="form-group">
+                        <input type="text" id="lookup-amount" name="lookup-amount" placeholder="1" /> <span>BTC</span>
+                        <p>The amount of BTC shown in the Buy and Sell Prices in the popup window. The badge always shows the spot price of 1BTC to USD.</p>
+                    </div>                
+                </form>
+            </section>
+            <section id="support" class="page">
+                <h1>Information, Support &amp; Inquiries</h1>
+                <hr/>
+
+                <h3>Buying/Selling Bitcoin with CoinBase</h3>
+                <p>CoinTracker currently reports Bitcoin price data from <a href="https://coinbase.com/?r=516d8390debb8d83db00003a&utm_campaign=user-referral&src=referral-link" target="_blank">CoinBase</a>, one of the easiest ways to buy, sell, receive or send Bitcoin. If you're interested in what CoinBase has to offer, use our referral link and we may each get $5 worth of Bitcoin on your first transaction.</p>
+                <p>Please note, CoinTracker is not affiliated with CoinBase or any CoinBase investors.</p>
+
+                <h3>Tip Jar</h3>
+                <p>If you enjoy this extension, feel free to send us a Bitcoin tip to help fund development on CoinTracker and other projects like it.</p>
+                <a class="coinbase-button" data-code="9bd5c497e94d51c51c516111c2a6b98b" data-button-style="custom_large" href="https://coinbase.com/checkouts/9bd5c497e94d51c51c516111c2a6b98b">Donate with Bitcoin</a><script src="https://coinbase.com/assets/button.js" type="text/javascript"></script>
+
+                <h3>Bugs, Suggestions &amp; Support</h3>
+                <p>If you run across any bugs, have suggestions for improvments or want to ask any questions, feel free to send a mail to <a href="mailto:cointracker@lastcommit.com">cointracker@lastcommit.com</a>.</p>
+
+            </section>
+        </div>
+        <script src="../scripts/jquery-2.0.3.min.js"></script>
+        <script src="../scripts/settings.js"></script>
+    </body>
+</html>

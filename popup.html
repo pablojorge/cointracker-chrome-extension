@@ -1,0 +1,51 @@
+<!doctype html>
+<html>
+<head>
+	<title>CoinTracker</title>
+	<link href="../stylesheets/cointrack.css" rel="stylesheet" type="text/css">
+</head>
+<body>
+	<section id="prices" name="prices" class="container">
+		<div class="row">
+			<h1 class="title text-primary col-xs-12">CoinBase Prices</h1>
+		</div>
+		<div id="price-cluster" class="row hide">
+			<div class="col-xs-4">
+				<h3 class="main">$<span id="price-spot"></span></h3>
+				<small><strong>Price of 1BTC</strong></small>
+			</div>
+			<div class="col-xs-4">
+				<h3>$<span id="price-buy"></span></h3>
+				<small>Buy <span class="lookup-amount">1</span> BTC</small>
+			</div>
+			<div class="col-xs-4">
+				<h3>$<span id="price-sell"></span></h3>
+				<small>Sell <span class="lookup-amount">1</span> BTC</small>
+			</div>
+		</div>
+		<div id="price-loading" class="row">
+			<div class="col-xs-12">
+				<p>Fetching Price Data</p>
+				<div class="progress progress-striped active">
+				  <div class="progress-bar"></div>
+				</div>
+			</div>
+		</div>
+		<div id="price-error" class="row hide">
+			<div class="col-xs-12">
+				<p class="alert alert-danger"><strong>ERROR</strong> There was an error retrieving the current BTC price from CoinBase.</p>
+			</div>
+		</div>
+	</section>
+	<hr />
+	<section id="footer" name="footer" class="container">
+		<div id="meta" class="row">
+			<div class="col-xs-12"><p><a href="settings/index.html" id="options-link" target="_blank">Options, Questions &amp; Support</a><span id="updated-at" class="text-muted invisible"> | Updated <span id="timestamp"></span></span></p></div>
+		</div>
+	</section>
+
+	<script src="../scripts/jquery-2.0.3.min.js"></script>
+	<script src="../scripts/popup.js"></script>
+
+</body>
+</html>
