@@ -4,9 +4,10 @@ var oldChromeVersion = !chrome.runtime,
 	pricesBuyURL= '/api/v1/prices/buy',
 	pricesSellURL= '/api/v1/prices/sell',
 	pricesSpotRateURL= '/api/v1/prices/spot_rate',
+    mtgoxURL='https://data.mtgox.com/api/1/BTCUSD/ticker_fast',
 	// keyss for accessing local storage
-	PRICE_KEY = 'currentPrice',
-	PRICE_KEY_PREVIOUS = 'previousPrice',
+	CURRENT_KEY = 'current',
+	PREVIOUS_KEY = 'previous',
 	SETTINGS_KEY = 'userSettings',
 	SETTINGS_DEFAULTS = {
 		'poll-frequency': '5',
@@ -42,7 +43,7 @@ function onAlarm(alarm) {
 // Check to see if the price data needs an update
 function checkPrice(params, forceUpdate) {
 	// check for recent updates
-	chrome.storage.sync.get(PRICE_KEY, function(items){
+	chrome.storage.sync.get(CURRENT_KEY, function(items){
 		// exit if the last update was less than 5 minutes ago
 		if( items.currentPrice &&
 			(Date.now() - items.currentPrice.timestamp) < (params['userSettings']['poll-frequency'] * 60000 * 0.95) &&
@@ -59,13 +60,12 @@ function checkPrice(params, forceUpdate) {
 // update the current prices and cache them in chrome storage
 function refreshPrice(params) {
 	var storageData = {},
-		spotPrice,
-		buyPrice,
-		sellPrice,
+		prices = {coinbase: {},
+                  mtgox: {}},
 		lookupAmount,
 		requestsComplete = 0;
 
-	function requestPrice(theUrl, priceType) {
+	function requestPrice(theUrl, exchange, priceType, parser) {
 		var xhr = new XMLHttpRequest();
 		var abortTimerId = window.setTimeout(function() {
 			xhr.abort();  // synchronously calls onreadystatechange
@@ -73,18 +73,7 @@ function refreshPrice(params) {
 
 		function handleSuccess(response) {
 			window.clearTimeout(abortTimerId);
-
-			switch(priceType) {
-				case 'spotPrice':
-					spotPrice = JSON.parse(response);
-					break;
-				case 'buyPrice':
-					buyPrice = JSON.parse(response);
-					break;
-				case 'sellPrice':
-					sellPrice = JSON.parse(response);
-					break;
-			}
+            prices[exchange][priceType] = parser(response);
 		}
 
 		function handleError() {
@@ -124,23 +113,21 @@ function refreshPrice(params) {
 
 	// polling function 
 	function checkRequests(){
-		if(requestsComplete >= 3){
+		if(requestsComplete >= 6){
 
 			window.clearInterval(pollRequests); //Clear Interval via ID for single time execution
 
-			if(spotPrice && buyPrice && sellPrice){
-				storageData[PRICE_KEY] = {
-					spotPrice: spotPrice.amount,
-					buyPrice: buyPrice.total.amount,
-					sellPrice: sellPrice.total.amount,
+			if(prices){
+				storageData[CURRENT_KEY] = {
+					prices: prices,
 					timestamp: Date.now()
 				};
 
 				// cache the previous price
-				chrome.storage.sync.get(PRICE_KEY, function(items){
-					storageData[PRICE_KEY_PREVIOUS] = items.currentPrice;
+				chrome.storage.sync.get(CURRENT_KEY, function(items){
+					storageData[PREVIOUS_KEY] = items.current;
 
-					console.log('storageData new: ' + storageData.currentPrice + ' storageData old: ' + storageData.previousPrice);
+					console.log('storageData new: ' + storageData.current + ' storageData old: ' + storageData.previous);
 
 					// save the new price data and wait for the messaging callback
 					chrome.storage.sync.set(storageData, function(){
@@ -150,7 +137,7 @@ function refreshPrice(params) {
 				});
 
 			} else {
-				console.log('spot: ' + spotPrice + ' buy: ' + buyPrice + ' sell: ' + sellPrice);
+				console.log('prices: ' + prices);
 				chrome.runtime.sendMessage({priceCheckFailed: true});
 			}
 		}
@@ -163,9 +150,13 @@ function refreshPrice(params) {
 		lookupAmount = 1;
 	}
 
-	requestPrice(coinBaseRoot + pricesSpotRateURL, 'spotPrice');
-	requestPrice(coinBaseRoot + pricesBuyURL + '?qty="' + lookupAmount + '"', 'buyPrice');
-	requestPrice(coinBaseRoot + pricesSellURL + '?qty="' + lookupAmount + '"', 'sellPrice');
+	requestPrice(coinBaseRoot + pricesSpotRateURL, 'coinbase', 'spotPrice', function(response){return JSON.parse(response).amount});
+	requestPrice(coinBaseRoot + pricesBuyURL + '?qty="' + lookupAmount + '"', 'coinbase', 'buyPrice', function(response){return JSON.parse(response).total.amount});
+	requestPrice(coinBaseRoot + pricesSellURL + '?qty="' + lookupAmount + '"', 'coinbase', 'sellPrice',  function(response){return JSON.parse(response).total.amount});
+
+	requestPrice(mtgoxURL, 'mtgox', 'spotPrice', function(response){return JSON.parse(response)["return"].last.value});
+	requestPrice(mtgoxURL, 'mtgox', 'buyPrice', function(response){return JSON.parse(response)["return"].buy.value});
+	requestPrice(mtgoxURL, 'mtgox', 'sellPrice', function(response){return JSON.parse(response)["return"].sell.value});
 
 	// The polling call
 	var pollRequests = window.setInterval(function(){ checkRequests() }, 100);
@@ -179,14 +170,14 @@ function updateBadge(newValue, oldValue, priceCheckStatus) {
 	// update price on badge
 	if (priceCheckStatus != 'failed') {
 		// format the price
-		var badgePrice = newValue.spotPrice < 100 ? String(parseFloat(newValue.spotPrice).toFixed(1)) : String(parseInt(newValue.spotPrice));  chrome.browserAction.setBadgeText({text: badgePrice});
+		var badgePrice = newValue.prices.coinbase.spotPrice < 100 ? String(parseFloat(newValue.prices.coinbase.spotPrice).toFixed(1)) : String(parseInt(newValue.prices.coinbase.spotPrice));  chrome.browserAction.setBadgeText({text: badgePrice});
 	} else {
 		chrome.browserAction.setBadgeText({text: '!'});
 	}
 
 	// update badge color
 	if(oldValue){
-		var percentChange = (newValue.spotPrice - oldValue.spotPrice)/oldValue.spotPrice * 100
+		var percentChange = (newValue.prices.coinbase.spotPrice - oldValue.prices.coinbase.spotPrice)/oldValue.prices.coinbase.spotPrice * 100
 		console.log("percent change = " + percentChange);
 	}
 	if (percentChange < -0.25 || priceCheckStatus == 'failed') { badgeColor = '#d43f3a'; } else
@@ -222,14 +213,14 @@ chrome.runtime.onMessage.addListener(
 		}
 
 		if (msg.priceUnchanged){
-			chrome.storage.sync.get(PRICE_KEY, function(items){
-				updateBadge(items.currentPrice);
+			chrome.storage.sync.get(CURRENT_KEY, function(items){
+				updateBadge(items.current);
 			});
 		}
 		
 		if (msg.priceUpdated){
-			chrome.storage.sync.get([PRICE_KEY_PREVIOUS][PRICE_KEY], function(items){
-				updateBadge(items.currentPrice, items.previousPrice);
+			chrome.storage.sync.get([PREVIOUS_KEY][CURRENT_KEY], function(items){
+				updateBadge(items.current, items.previous);
 			});
 			return true;
 		}

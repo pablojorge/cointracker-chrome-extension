@@ -1,5 +1,5 @@
 //adding listener when body is loaded to call init function.
-var PRICE_KEY = 'currentPrice',
+var CURRENT_KEY = 'current',
 	SETTINGS_KEY = 'userSettings';
 
 function init() {
@@ -22,12 +22,18 @@ function updateViewPrices() {
 	chrome.storage.sync.get(null, function(items){
 		$('.lookup-amount').html(items[SETTINGS_KEY]['lookup-amount']);		
 
-		document.getElementById('price-spot').innerHTML=items[PRICE_KEY].spotPrice.replace(/(\d)(?=(\d{3})+\.)/g, '$1,');
-		document.getElementById('price-buy').innerHTML=items[PRICE_KEY].buyPrice.replace(/(\d)(?=(\d{3})+\.)/g, '$1,');
-		document.getElementById('price-sell').innerHTML=items[PRICE_KEY].sellPrice.replace(/(\d)(?=(\d{3})+\.)/g, '$1,');
-		document.getElementById('timestamp').innerHTML=customDate(items[PRICE_KEY].timestamp, '#DD#/#MM#/#YY# #hh#:#mm##ampm#');
+        for (exchange in items[CURRENT_KEY].prices) {
+		    document.getElementById(exchange + '-price-spot').innerHTML=items[CURRENT_KEY].prices[exchange].spotPrice.replace(/(\d)(?=(\d{3})+\.)/g, '$1,');
+		    document.getElementById(exchange + '-price-buy').innerHTML=items[CURRENT_KEY].prices[exchange].buyPrice.replace(/(\d)(?=(\d{3})+\.)/g, '$1,');
+		    document.getElementById(exchange + '-price-sell').innerHTML=items[CURRENT_KEY].prices[exchange].sellPrice.replace(/(\d)(?=(\d{3})+\.)/g, '$1,');
+        }
 
-		$('#price-cluster').removeClass('hide');
+		document.getElementById('timestamp').innerHTML=customDate(items[CURRENT_KEY].timestamp, '#DD#/#MM#/#YY# #hh#:#mm##ampm#');
+
+        for (exchange in items[CURRENT_KEY].prices) {
+		    $('#' + exchange + '-price-cluster').removeClass('hide');
+        }
+
 		$('#price-loading').addClass('hide');
 		$('#updated-at').removeClass('invisible');
 	});
