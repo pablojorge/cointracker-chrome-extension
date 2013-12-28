@@ -5,11 +5,12 @@ var oldChromeVersion = !chrome.runtime,
 	pricesSellURL= '/api/v1/prices/sell',
 	pricesSpotRateURL= '/api/v1/prices/spot_rate',
     mtgoxURL='https://data.mtgox.com/api/1/BTCUSD/ticker_fast',
-	// keyss for accessing local storage
+	// keys for accessing local storage
 	CURRENT_KEY = 'current',
 	PREVIOUS_KEY = 'previous',
 	SETTINGS_KEY = 'userSettings',
 	SETTINGS_DEFAULTS = {
+        'main-exchange': 'coinbase',
 		'poll-frequency': '5',
 		'lookup-amount': '1',
 		'timestamp': Date.now()
@@ -45,8 +46,8 @@ function checkPrice(params, forceUpdate) {
 	// check for recent updates
 	chrome.storage.sync.get(CURRENT_KEY, function(items){
 		// exit if the last update was less than 5 minutes ago
-		if( items.currentPrice &&
-			(Date.now() - items.currentPrice.timestamp) < (params['userSettings']['poll-frequency'] * 60000 * 0.95) &&
+		if( items.current &&
+			(Date.now() - items.current.timestamp) < (params['userSettings']['poll-frequency'] * 60000 * 0.95) &&
 			forceUpdate != true) {
 			console.log('price is fresh');
 			chrome.runtime.sendMessage({priceUnchanged: true});
@@ -163,21 +164,23 @@ function refreshPrice(params) {
 }
 
 // Updates the badge UI
-function updateBadge(newValue, oldValue, priceCheckStatus) { 
+function updateBadge(userSettings, newValue, oldValue, priceCheckStatus) { 
 	var badgeColor = '#46b8da',
 		percentChange = 0;
 
 	// update price on badge
 	if (priceCheckStatus != 'failed') {
+        newPrice = newValue.prices[userSettings["main-exchange"]].spotPrice;
 		// format the price
-		var badgePrice = newValue.prices.coinbase.spotPrice < 100 ? String(parseFloat(newValue.prices.coinbase.spotPrice).toFixed(1)) : String(parseInt(newValue.prices.coinbase.spotPrice));  chrome.browserAction.setBadgeText({text: badgePrice});
+		var badgePrice = newPrice < 100 ? String(parseFloat(newPrice).toFixed(1)) : String(parseInt(newPrice));  chrome.browserAction.setBadgeText({text: badgePrice});
 	} else {
 		chrome.browserAction.setBadgeText({text: '!'});
 	}
 
 	// update badge color
 	if(oldValue){
-		var percentChange = (newValue.prices.coinbase.spotPrice - oldValue.prices.coinbase.spotPrice)/oldValue.prices.coinbase.spotPrice * 100
+        oldPrice = oldValue.prices[userSettings["main-exchange"]].spotPrice;
+		var percentChange = (newPrice - oldPrice)/oldPrice * 100
 		console.log("percent change = " + percentChange);
 	}
 	if (percentChange < -0.25 || priceCheckStatus == 'failed') { badgeColor = '#d43f3a'; } else
@@ -209,18 +212,18 @@ chrome.runtime.onMessage.addListener(
 
 		// if the AJAX request failed
 		if (msg.priceCheckFailed){
-			updateBadge(null,null,'failed');
+			updateBadge(null,null,null,'failed');
 		}
 
 		if (msg.priceUnchanged){
-			chrome.storage.sync.get(CURRENT_KEY, function(items){
-				updateBadge(items.current);
+			chrome.storage.sync.get([SETTINGS_KEY, CURRENT_KEY], function(items){
+				updateBadge(items.userSettings, items.current);
 			});
 		}
 		
 		if (msg.priceUpdated){
-			chrome.storage.sync.get([PREVIOUS_KEY][CURRENT_KEY], function(items){
-				updateBadge(items.current, items.previous);
+			chrome.storage.sync.get([SETTINGS_KEY, PREVIOUS_KEY, CURRENT_KEY], function(items){
+				updateBadge(items.userSettings, items.current, items.previous);
 			});
 			return true;
 		}

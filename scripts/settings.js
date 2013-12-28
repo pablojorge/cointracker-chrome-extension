@@ -1,5 +1,6 @@
 var SETTINGS_KEY = 'userSettings',
 		SETTINGS_DEFAULTS = {
+            'main-exchange': 'coinbase',
 			'poll-frequency': '5',
 			'lookup-amount': '1',
 			'timestamp': Date.now()
@@ -32,6 +33,9 @@ function initializeForm(properties) {
 	for (var key in properties) {
 		if( properties.hasOwnProperty( key ) ) {
 			switch (key){
+                case 'main-exchange':
+                    $('#'+key+'-'+properties[key]).attr('checked', true);
+                    break
 				case 'poll-frequency':
 					$('#'+key+properties[key]).attr('checked', true);
 					break;
@@ -39,7 +43,7 @@ function initializeForm(properties) {
 					$('#'+key).val(properties[key]);
 					break;
 			}
-    }
+        }
 	}
 }
 

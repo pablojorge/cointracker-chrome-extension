@@ -19,6 +19,19 @@
                 <h1>Settings</h1>
                 <hr/>
                 <form id="user-settings">
+                    <h3>Main exchange</h3>
+                    <p>The latest price in the selected exchange will be shown in the badge.</p>
+                    <div class="radio">
+                        <div>
+                            <input id="main-exchange-coinbase" type="radio" name="main-exchange" value="coinbase">
+                            <label for="main-exchange-coinbase">Coinbase</label>
+                        </div>
+                        <div>
+                            <input id="main-exchange-mtgox" type="radio" name="main-exchange" value="mtgox">
+                            <label for="main-exchange-mtgox">MtGox</label>
+                        </div>
+                    </div>
+
                     <h3>Update Frequency</h3>
                     <p>How often CoinTracker checks the current price.</p>
                     <div class="radio">
