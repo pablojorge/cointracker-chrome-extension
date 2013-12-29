@@ -22,10 +22,14 @@ function updateViewPrices() {
 	chrome.storage.sync.get(null, function(items){
 		$('.lookup-amount').html(items[SETTINGS_KEY]['lookup-amount']);		
 
+        function formatPrice(number){return Number(number).toFixed(2).replace(/(\d)(?=(\d{3})+\.)/g, '$1,');}
+
         for (exchange in items[CURRENT_KEY].prices) {
-		    document.getElementById(exchange + '-price-spot').innerHTML=items[CURRENT_KEY].prices[exchange].spotPrice.replace(/(\d)(?=(\d{3})+\.)/g, '$1,');
-		    document.getElementById(exchange + '-price-buy').innerHTML=items[CURRENT_KEY].prices[exchange].buyPrice.replace(/(\d)(?=(\d{3})+\.)/g, '$1,');
-		    document.getElementById(exchange + '-price-sell').innerHTML=items[CURRENT_KEY].prices[exchange].sellPrice.replace(/(\d)(?=(\d{3})+\.)/g, '$1,');
+            prices = items[CURRENT_KEY].prices[exchange];
+
+		    document.getElementById(exchange + '-price-spot').innerHTML=formatPrice(prices.spotPrice);
+		    document.getElementById(exchange + '-price-buy').innerHTML=formatPrice(prices.buyPrice);
+		    document.getElementById(exchange + '-price-sell').innerHTML=formatPrice(prices.sellPrice);
         }
 
 		document.getElementById('timestamp').innerHTML=customDate(items[CURRENT_KEY].timestamp, '#DD#/#MM#/#YY# #hh#:#mm##ampm#');

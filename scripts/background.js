@@ -64,9 +64,9 @@ function refreshPrice(params) {
 		prices = {coinbase: {},
                   mtgox: {}},
 		lookupAmount,
-		requestsComplete = 0;
+		requestsPending = 0;
 
-	function requestPrice(theUrl, exchange, priceType, parser) {
+	function requestPrice(theUrl, handler) {
 		var xhr = new XMLHttpRequest();
 		var abortTimerId = window.setTimeout(function() {
 			xhr.abort();  // synchronously calls onreadystatechange
@@ -74,7 +74,7 @@ function refreshPrice(params) {
 
 		function handleSuccess(response) {
 			window.clearTimeout(abortTimerId);
-            prices[exchange][priceType] = parser(response);
+            handler(response);
 		}
 
 		function handleError() {
@@ -88,7 +88,7 @@ function refreshPrice(params) {
 					return;
 				}
 
-				requestsComplete++;
+				requestsPending--;
 
 				if (xhr.status === 200 || xhr.status === 304) {
 					handleSuccess(xhr.responseText);
@@ -104,6 +104,8 @@ function refreshPrice(params) {
 				handleError();
 			};
 
+			requestsPending++;
+
 			xhr.open( "GET", theUrl, true );
 			xhr.send( null );
 		} catch(e) {
@@ -114,7 +116,7 @@ function refreshPrice(params) {
 
 	// polling function 
 	function checkRequests(){
-		if(requestsComplete >= 6){
+		if(requestsPending == 0){
 
 			window.clearInterval(pollRequests); //Clear Interval via ID for single time execution
 
@@ -150,14 +152,35 @@ function refreshPrice(params) {
 	} else {
 		lookupAmount = 1;
 	}
+    
+    function requestCoinbase() {
+        function buildHandler(priceType, parser) {
+            return function(response) {
+                prices.coinbase[priceType] = parser(response);
+            }
+        }
 
-	requestPrice(coinBaseRoot + pricesSpotRateURL, 'coinbase', 'spotPrice', function(response){return JSON.parse(response).amount});
-	requestPrice(coinBaseRoot + pricesBuyURL + '?qty="' + lookupAmount + '"', 'coinbase', 'buyPrice', function(response){return JSON.parse(response).total.amount});
-	requestPrice(coinBaseRoot + pricesSellURL + '?qty="' + lookupAmount + '"', 'coinbase', 'sellPrice',  function(response){return JSON.parse(response).total.amount});
+    	requestPrice(coinBaseRoot + pricesSpotRateURL, buildHandler('spotPrice', function(response){return JSON.parse(response).amount}));
+	    requestPrice(coinBaseRoot + pricesBuyURL + '?qty="' + lookupAmount + '"', buildHandler('buyPrice', function(response){return JSON.parse(response).total.amount}));
+    	requestPrice(coinBaseRoot + pricesSellURL + '?qty="' + lookupAmount + '"', buildHandler('sellPrice',  function(response){return JSON.parse(response).total.amount}));
+    }
 
-	requestPrice(mtgoxURL, 'mtgox', 'spotPrice', function(response){return JSON.parse(response)["return"].last.value});
-	requestPrice(mtgoxURL, 'mtgox', 'buyPrice', function(response){return JSON.parse(response)["return"].buy.value});
-	requestPrice(mtgoxURL, 'mtgox', 'sellPrice', function(response){return JSON.parse(response)["return"].sell.value});
+    function requestMtGox() {
+        function handler(response) {
+            _return = JSON.parse(response)["return"];
+
+            prices.mtgox = {
+                spotPrice: _return.last.value,
+                buyPrice: _return.buy.value * lookupAmount,
+                sellPrice: _return.sell.value * lookupAmount,
+            }
+        }
+
+    	requestPrice(mtgoxURL, handler);
+    }
+
+    requestCoinbase();
+    requestMtGox();
 
 	// The polling call
 	var pollRequests = window.setInterval(function(){ checkRequests() }, 100);
