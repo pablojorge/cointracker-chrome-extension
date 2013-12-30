@@ -176,6 +176,22 @@ function refreshPrice(exchange, params) {
     	requestPrice(mtgoxURL, handler);
     }
 
+    exchangeHandler.btce = function () {
+        var btceURL = 'https://btc-e.com/api/2/btc_usd/ticker';
+
+        function handler(response) {
+            ticker = JSON.parse(response)["ticker"];
+
+            current = {
+                spotPrice: ticker.buy,
+                buyPrice: ticker.buy * lookupAmount,
+                sellPrice: ticker.sell * lookupAmount,
+            }
+        }
+
+    	requestPrice(btceURL, handler);
+    }
+
     exchangeHandler[exchange]();
 
 	// The polling call
