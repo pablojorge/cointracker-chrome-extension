@@ -1,13 +1,7 @@
 // Legacy support for pre-event-pages.
 var oldChromeVersion = !chrome.runtime,
-	coinBaseRoot = 'https://coinbase.com',
-	pricesBuyURL= '/api/v1/prices/buy',
-	pricesSellURL= '/api/v1/prices/sell',
-	pricesSpotRateURL= '/api/v1/prices/spot_rate',
-    mtgoxURL='https://data.mtgox.com/api/1/BTCUSD/ticker_fast',
 	// keys for accessing local storage
-	CURRENT_KEY = 'current',
-	PREVIOUS_KEY = 'previous',
+	PRICES_KEY = 'prices',
 	SETTINGS_KEY = 'userSettings',
 	SETTINGS_DEFAULTS = {
         'main-exchange': 'coinbase',
@@ -17,15 +11,14 @@ var oldChromeVersion = !chrome.runtime,
 	},
 	requestTimeout = 1000 * 2;  // 2 seconds
 
-
-
 function onInit() {
 	chrome.storage.sync.get(SETTINGS_KEY, function(items){
 		// initialize settings
 		if( items.userSettings === undefined ){
 			initializeSettings();
 		} else {
-			checkPrice(items, false);
+            exchange = items.userSettings["main-exchange"];
+			checkPrice(exchange, items, false);
 		}
 	});
 }
@@ -36,35 +29,35 @@ function onAlarm(alarm) {
 	// window.setTimeout on old chrome versions.
 	if (alarm && alarm.name == 'watchdog') {
 		chrome.storage.sync.get(SETTINGS_KEY, function(items){
-			checkPrice(items, false);
+            exchange = items.userSettings["main-exchange"];
+			checkPrice(exchange, items, false);
 		});
 	}
 }
 
 // Check to see if the price data needs an update
-function checkPrice(params, forceUpdate) {
+function checkPrice(exchange, params, forceUpdate) {
 	// check for recent updates
-	chrome.storage.sync.get(CURRENT_KEY, function(items){
-		// exit if the last update was less than 5 minutes ago
-		if( items.current &&
-			(Date.now() - items.current.timestamp) < (params['userSettings']['poll-frequency'] * 60000 * 0.95) &&
+	chrome.storage.sync.get(PRICES_KEY, function(items){
+		// exit if the last update was less than X minutes ago
+		if( items.prices[exchange] &&
+			(Date.now() - items.prices[exchange].current.timestamp) < (params['userSettings']['poll-frequency'] * 60000 * 0.95) &&
 			forceUpdate != true) {
-			console.log('price is fresh');
-			chrome.runtime.sendMessage({priceUnchanged: true});
+			console.log('price of ' + exchange + ' is fresh');
+			chrome.runtime.sendMessage({priceUnchanged: true, exchange: exchange});
 		} else {
-			console.log('price is old, refreshing');
-			refreshPrice(params);
+			console.log('price of ' + exchange + ' is old, refreshing');
+			refreshPrice(exchange, params);
 		}
 	});
 }
 
 // update the current prices and cache them in chrome storage
-function refreshPrice(params) {
-	var storageData = {},
-		prices = {coinbase: {},
-                  mtgox: {}},
-		lookupAmount,
-		requestsPending = 0;
+function refreshPrice(exchange, params) {
+	var current = {},
+		lookupAmount = 1,
+		requestsPending = 0,
+        exchangeHandler = {};
 
 	function requestPrice(theUrl, handler) {
 		var xhr = new XMLHttpRequest();
@@ -120,28 +113,27 @@ function refreshPrice(params) {
 
 			window.clearInterval(pollRequests); //Clear Interval via ID for single time execution
 
-			if(prices){
-				storageData[CURRENT_KEY] = {
-					prices: prices,
-					timestamp: Date.now()
-				};
+			if(current){
+				current.timestamp = Date.now();
 
 				// cache the previous price
-				chrome.storage.sync.get(CURRENT_KEY, function(items){
-					storageData[PREVIOUS_KEY] = items.current;
-
-					console.log('storageData new: ' + storageData.current + ' storageData old: ' + storageData.previous);
+				chrome.storage.sync.get(PRICES_KEY, function(items){
+                    if (items.prices===undefined)
+                        items.prices={}
+                    if (items.prices[exchange]===undefined)
+                        items.prices[exchange]={}
+                    items.prices[exchange].previous = items.prices[exchange].current;
+                    items.prices[exchange].current = current;
 
 					// save the new price data and wait for the messaging callback
-					chrome.storage.sync.set(storageData, function(){
-						chrome.runtime.sendMessage({priceUpdated: true});
+					chrome.storage.sync.set(items, function(){
+						chrome.runtime.sendMessage({priceUpdated: true, exchange: exchange});
 					});
 
 				});
 
 			} else {
-				console.log('prices: ' + prices);
-				chrome.runtime.sendMessage({priceCheckFailed: true});
+				chrome.runtime.sendMessage({priceCheckFailed: true, exchange: exchange});
 			}
 		}
 	}
@@ -149,14 +141,17 @@ function refreshPrice(params) {
 	// trigger the price calls
 	if (params['userSettings']['lookup-amount']) {
 		lookupAmount = params['userSettings']['lookup-amount'];
-	} else {
-		lookupAmount = 1;
 	}
     
-    function requestCoinbase() {
+    exchangeHandler.coinbase = function () {
+        var coinBaseRoot = 'https://coinbase.com',
+	        pricesBuyURL= '/api/v1/prices/buy',
+	        pricesSellURL= '/api/v1/prices/sell',
+	        pricesSpotRateURL= '/api/v1/prices/spot_rate';
+
         function buildHandler(priceType, parser) {
             return function(response) {
-                prices.coinbase[priceType] = parser(response);
+                current[priceType] = parser(response);
             }
         }
 
@@ -165,11 +160,13 @@ function refreshPrice(params) {
     	requestPrice(coinBaseRoot + pricesSellURL + '?qty="' + lookupAmount + '"', buildHandler('sellPrice',  function(response){return JSON.parse(response).total.amount}));
     }
 
-    function requestMtGox() {
+    exchangeHandler.mtgox = function () {
+        var mtgoxURL = 'https://data.mtgox.com/api/1/BTCUSD/ticker_fast';
+
         function handler(response) {
             _return = JSON.parse(response)["return"];
 
-            prices.mtgox = {
+            current = {
                 spotPrice: _return.last.value,
                 buyPrice: _return.buy.value * lookupAmount,
                 sellPrice: _return.sell.value * lookupAmount,
@@ -179,35 +176,44 @@ function refreshPrice(params) {
     	requestPrice(mtgoxURL, handler);
     }
 
-    requestCoinbase();
-    requestMtGox();
+    exchangeHandler[exchange]();
 
 	// The polling call
 	var pollRequests = window.setInterval(function(){ checkRequests() }, 100);
 }
 
 // Updates the badge UI
-function updateBadge(userSettings, newValue, oldValue, priceCheckStatus) { 
+function updateBadge(exchange, prices, settings, priceCheckStatus) { 
 	var badgeColor = '#46b8da',
 		percentChange = 0;
 
+    if (settings["main-exchange"] != exchange) {
+        console.log("badge: ignoring update of " + exchange);
+        return;
+    }
+
 	// update price on badge
 	if (priceCheckStatus != 'failed') {
-        newPrice = newValue.prices[userSettings["main-exchange"]].spotPrice;
+        newPrice = prices[exchange].current.spotPrice;
 		// format the price
-		var badgePrice = newPrice < 100 ? String(parseFloat(newPrice).toFixed(1)) : String(parseInt(newPrice));  chrome.browserAction.setBadgeText({text: badgePrice});
+		var badgePrice = newPrice < 100 ? String(parseFloat(newPrice).toFixed(1)) : String(parseInt(newPrice));  
+        chrome.browserAction.setBadgeText({text: badgePrice});
 	} else {
 		chrome.browserAction.setBadgeText({text: '!'});
 	}
 
 	// update badge color
-	if(oldValue){
-        oldPrice = oldValue.prices[userSettings["main-exchange"]].spotPrice;
+	if (prices[exchange].previous) {
+        oldPrice = prices[exchange].previous.spotPrice;
 		var percentChange = (newPrice - oldPrice)/oldPrice * 100
 		console.log("percent change = " + percentChange);
 	}
-	if (percentChange < -0.25 || priceCheckStatus == 'failed') { badgeColor = '#d43f3a'; } else
-	if (percentChange > 0.25) { badgeColor = '#4cae4c'; }
+
+	if (percentChange < -0.25 || priceCheckStatus == 'failed') { 
+        badgeColor = '#d43f3a'; 
+    } else if (percentChange > 0.25) { 
+        badgeColor = '#4cae4c'; 
+    }
 
 	chrome.browserAction.setBadgeBackgroundColor({color: badgeColor});
 
@@ -230,7 +236,8 @@ chrome.runtime.onMessage.addListener(
 		if (msg.settingsSaved) {
 			// create the watchdog
 			chrome.alarms.create('watchdog', {periodInMinutes:parseInt(msg.params[SETTINGS_KEY]['poll-frequency'])});
-			checkPrice(msg.params, true);
+            exchange = msg.params[SETTINGS_KEY]["main-exchange"];
+			checkPrice(exchange, msg.params, false);
 		}
 
 		// if the AJAX request failed
@@ -239,14 +246,14 @@ chrome.runtime.onMessage.addListener(
 		}
 
 		if (msg.priceUnchanged){
-			chrome.storage.sync.get([SETTINGS_KEY, CURRENT_KEY], function(items){
-				updateBadge(items.userSettings, items.current);
+			chrome.storage.sync.get([PRICES_KEY, SETTINGS_KEY], function(items){
+				updateBadge(msg.exchange, items[PRICES_KEY], items[SETTINGS_KEY]);
 			});
 		}
 		
 		if (msg.priceUpdated){
-			chrome.storage.sync.get([SETTINGS_KEY, PREVIOUS_KEY, CURRENT_KEY], function(items){
-				updateBadge(items.userSettings, items.current, items.previous);
+			chrome.storage.sync.get([PRICES_KEY, SETTINGS_KEY], function(items){
+				updateBadge(msg.exchange, items[PRICES_KEY], items[SETTINGS_KEY]);
 			});
 			return true;
 		}

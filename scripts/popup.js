@@ -2,44 +2,49 @@
 var CURRENT_KEY = 'current',
 	SETTINGS_KEY = 'userSettings';
 
+var exchanges = ["coinbase", "mtgox"],
+    pending = [];
+
 function init() {
 	chrome.runtime.onMessage.addListener(
 		function(message, sender, sendResponse) {
 			if (message.priceUpdated || message.priceUnchanged)
-				updateViewPrices();
+				updateViewPrices(message.exchange);
 			if (message.priceCheckFailed)
 				updateViewError();
 		});
 	chrome.runtime.getBackgroundPage(function(bg) {
 		chrome.storage.sync.get(SETTINGS_KEY, function(items){
-			bg.checkPrice(items, false);
+            exchanges.forEach(function(exchange){
+    			bg.checkPrice(exchange, items, false);
+                pending.push(exchange);
+            });
 		});
     });
     document.getElementById('prices').focus();
 }
 
-function updateViewPrices() {
+function updateViewPrices(exchange) {
 	chrome.storage.sync.get(null, function(items){
 		$('.lookup-amount').html(items[SETTINGS_KEY]['lookup-amount']);		
 
         function formatPrice(number){return Number(number).toFixed(2).replace(/(\d)(?=(\d{3})+\.)/g, '$1,');}
 
-        for (exchange in items[CURRENT_KEY].prices) {
-            prices = items[CURRENT_KEY].prices[exchange];
+        prices = items.prices[exchange].current;
 
-		    document.getElementById(exchange + '-price-spot').innerHTML=formatPrice(prices.spotPrice);
-		    document.getElementById(exchange + '-price-buy').innerHTML=formatPrice(prices.buyPrice);
-		    document.getElementById(exchange + '-price-sell').innerHTML=formatPrice(prices.sellPrice);
-        }
+		document.getElementById(exchange + '-price-spot').innerHTML=formatPrice(prices.spotPrice);
+		document.getElementById(exchange + '-price-buy').innerHTML=formatPrice(prices.buyPrice);
+		document.getElementById(exchange + '-price-sell').innerHTML=formatPrice(prices.sellPrice);
+		document.getElementById(exchange + '-timestamp').innerHTML=customDate(prices.timestamp, '#DD#/#MM#/#YY# #hh#:#mm##ampm#');
 
-		document.getElementById('timestamp').innerHTML=customDate(items[CURRENT_KEY].timestamp, '#DD#/#MM#/#YY# #hh#:#mm##ampm#');
+	    $('#' + exchange + '-price-cluster').removeClass('hide');
+		$('#' + exchange + '-updated-at').removeClass('invisible');
 
-        for (exchange in items[CURRENT_KEY].prices) {
-		    $('#' + exchange + '-price-cluster').removeClass('hide');
-        }
+        pending.splice(pending.indexOf(exchange), 1);
 
-		$('#price-loading').addClass('hide');
-		$('#updated-at').removeClass('invisible');
+        if(!pending.length) {
+		    $('#price-loading').addClass('hide');
+		}
 	});
 }
 
