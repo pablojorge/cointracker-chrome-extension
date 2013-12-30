@@ -2,7 +2,7 @@
 var CURRENT_KEY = 'current',
 	SETTINGS_KEY = 'userSettings';
 
-var exchanges = ["coinbase", "mtgox", "btce"],
+var exchanges = ["coinbase", "mtgox", "btce", "virwoxsll"],
     pending = [];
 
 function init() {

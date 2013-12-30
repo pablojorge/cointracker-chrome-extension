@@ -192,6 +192,21 @@ function refreshPrice(exchange, params) {
     	requestPrice(btceURL, handler);
     }
 
+    exchangeHandler.virwoxsll = function () {
+        var bestPricesURL = 'https://www.virwox.com/api/json.php?method=getBestPrices&symbols[0]=BTC/SLL';
+
+        function handler(response) {
+            result = JSON.parse(response)["result"];
+            current = {
+                spotPrice: result[0].bestSellPrice,
+                buyPrice: result[0].bestSellPrice * lookupAmount,
+                sellPrice: result[0].bestBuyPrice * lookupAmount
+            }
+        }
+
+    	requestPrice(bestPricesURL, handler);
+    }
+
     exchangeHandler[exchange]();
 
 	// The polling call
