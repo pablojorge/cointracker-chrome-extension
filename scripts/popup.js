@@ -13,14 +13,13 @@ function init() {
 			if (message.priceCheckFailed)
 				updateViewError();
 		});
-	chrome.runtime.getBackgroundPage(function(bg) {
-		chrome.storage.sync.get(SETTINGS_KEY, function(items){
-            exchanges.forEach(function(exchange){
-    			bg.checkPrice(exchange, items, false);
-                pending.push(exchange);
-            });
-		});
+
+    refreshPrices(false);
+
+	$('#refresh-link').click(function(ev){
+        refreshPrices(true);
     });
+
     document.getElementById('prices').focus();
 }
 
@@ -46,6 +45,21 @@ function updateViewPrices(exchange) {
 		    $('#price-loading').addClass('hide');
 		}
 	});
+}
+
+function refreshPrices(force) {
+    $('#price-loading').removeClass('hide');
+
+	chrome.runtime.getBackgroundPage(function(bg) {
+		chrome.storage.sync.get(SETTINGS_KEY, function(items){
+            exchanges.forEach(function(exchange){
+	            $('#' + exchange + '-price-cluster').addClass('hide');
+		        $('#' + exchange + '-updated-at').addClass('invisible');
+    			bg.checkPrice(exchange, items, force);
+                pending.push(exchange);
+            });
+		});
+    });
 }
 
 function updateViewError() {
