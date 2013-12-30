@@ -2,7 +2,7 @@
 var CURRENT_KEY = 'current',
 	SETTINGS_KEY = 'userSettings';
 
-var exchanges = ["coinbase", "mtgox", "btce", "virwoxsll"],
+var exchanges = ["coinbase", "mtgox", "btce", "virwoxbtc", "virwoxsll"],
     pending = [];
 
 function init() {
@@ -26,15 +26,16 @@ function init() {
 function updateViewPrices(exchange) {
 	chrome.storage.sync.get(null, function(items){
 		$('.lookup-amount').html(items[SETTINGS_KEY]['lookup-amount']);		
+		$('.lookup-amount-sll').html(items[SETTINGS_KEY]['lookup-amount-sll']);		
 
         function formatPrice(number){return Number(number).toFixed(2).replace(/(\d)(?=(\d{3})+\.)/g, '$1,');}
 
         prices = items.prices[exchange].current;
 
-		document.getElementById(exchange + '-price-spot').innerHTML=formatPrice(prices.spotPrice);
-		document.getElementById(exchange + '-price-buy').innerHTML=formatPrice(prices.buyPrice);
-		document.getElementById(exchange + '-price-sell').innerHTML=formatPrice(prices.sellPrice);
-		document.getElementById(exchange + '-timestamp').innerHTML=customDate(prices.timestamp, '#DD#/#MM#/#YY# #hh#:#mm##ampm#');
+		$('#' + exchange + '-price-spot').html(formatPrice(prices.spotPrice));
+		$('#' + exchange + '-price-buy').html(formatPrice(prices.buyPrice));
+		$('#' + exchange + '-price-sell').html(formatPrice(prices.sellPrice));
+		$('#' + exchange + '-timestamp').html(customDate(prices.timestamp, '#DD#/#MM#/#YY# #hh#:#mm##ampm#'));
 
 	    $('#' + exchange + '-price-cluster').removeClass('hide');
 		$('#' + exchange + '-updated-at').removeClass('invisible');

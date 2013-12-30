@@ -7,6 +7,7 @@ var oldChromeVersion = !chrome.runtime,
         'main-exchange': 'coinbase',
 		'poll-frequency': '5',
 		'lookup-amount': '1',
+		'lookup-amount-sll': '1',
 		'timestamp': Date.now()
 	},
 	requestTimeout = 1000 * 2;  // 2 seconds
@@ -40,7 +41,8 @@ function checkPrice(exchange, params, forceUpdate) {
 	// check for recent updates
 	chrome.storage.sync.get(PRICES_KEY, function(items){
 		// exit if the last update was less than X minutes ago
-		if( items.prices[exchange] &&
+		if( items.prices &&
+            items.prices[exchange] &&
 			(Date.now() - items.prices[exchange].current.timestamp) < (params['userSettings']['poll-frequency'] * 60000 * 0.95) &&
 			forceUpdate != true) {
 			console.log('price of ' + exchange + ' is fresh');
@@ -56,6 +58,7 @@ function checkPrice(exchange, params, forceUpdate) {
 function refreshPrice(exchange, params) {
 	var current = {},
 		lookupAmount = 1,
+		lookupAmountSLL = 1,
 		requestsPending = 0,
         exchangeHandler = {};
 
@@ -143,6 +146,10 @@ function refreshPrice(exchange, params) {
 		lookupAmount = params['userSettings']['lookup-amount'];
 	}
     
+	if (params['userSettings']['lookup-amount-sll']) {
+		lookupAmountSLL = params['userSettings']['lookup-amount-sll'];
+	}
+    
     exchangeHandler.coinbase = function () {
         var coinBaseRoot = 'https://coinbase.com',
 	        pricesBuyURL= '/api/v1/prices/buy',
@@ -192,7 +199,7 @@ function refreshPrice(exchange, params) {
     	requestPrice(btceURL, handler);
     }
 
-    exchangeHandler.virwoxsll = function () {
+    exchangeHandler.virwoxbtc = function () {
         var bestPricesURL = 'https://www.virwox.com/api/json.php?method=getBestPrices&symbols[0]=BTC/SLL';
 
         function handler(response) {
@@ -201,6 +208,21 @@ function refreshPrice(exchange, params) {
                 spotPrice: result[0].bestSellPrice,
                 buyPrice: result[0].bestSellPrice * lookupAmount,
                 sellPrice: result[0].bestBuyPrice * lookupAmount
+            }
+        }
+
+    	requestPrice(bestPricesURL, handler);
+    }
+
+    exchangeHandler.virwoxsll = function () {
+        var bestPricesURL = 'https://www.virwox.com/api/json.php?method=getBestPrices&symbols[0]=USD/SLL';
+
+        function handler(response) {
+            result = JSON.parse(response)["result"];
+            current = {
+                spotPrice: result[0].bestSellPrice,
+                buyPrice: lookupAmountSLL / result[0].bestSellPrice,
+                sellPrice: lookupAmountSLL / result[0].bestBuyPrice
             }
         }
 
@@ -268,7 +290,7 @@ chrome.runtime.onMessage.addListener(
 			// create the watchdog
 			chrome.alarms.create('watchdog', {periodInMinutes:parseInt(msg.params[SETTINGS_KEY]['poll-frequency'])});
             exchange = msg.params[SETTINGS_KEY]["main-exchange"];
-			checkPrice(exchange, msg.params, false);
+			checkPrice(exchange, msg.params, true);
 		}
 
 		// if the AJAX request failed
