@@ -2348,6 +2348,9 @@ h1.title span.text-muted {
   font-size: 15px;
   font-weight: 400;
 }
+.selected {
+  background-color: #ADF1FF;
+}
 #price-cluster,
 #price-loading {
   min-height: 20px;

@@ -2,7 +2,13 @@
 var CURRENT_KEY = 'current',
 	SETTINGS_KEY = 'userSettings';
 
-var exchanges = ["coinbase", "mtgox", "btce", "virwoxbtc", "virwoxsll", "dolarblue"],
+var exchanges = ["coinbase", 
+                 "mtgox", 
+                 "btce", 
+                 "bitstamp",
+                 "virwox", 
+                 "dolarblue", 
+                 "dolaroficial"],
     pending = [];
 
 function init() {
@@ -20,31 +26,38 @@ function init() {
         refreshPrices(true);
     });
 
-    document.getElementById('prices').focus();
+    document.getElementById('footer').focus();
 }
 
 function updateViewPrices(exchange) {
 	chrome.storage.sync.get(null, function(items){
+		main_exchange = items[SETTINGS_KEY]['main-exchange'];		
 		$('.lookup-amount').html(items[SETTINGS_KEY]['lookup-amount']);		
-		$('.lookup-amount-sll').html(items[SETTINGS_KEY]['lookup-amount-sll']);		
-		$('.lookup-amount-usd').html(items[SETTINGS_KEY]['lookup-amount-usd']);		
 
         function formatPrice(number){return Number(number).toFixed(2).replace(/(\d)(?=(\d{3})+\.)/g, '$1,');}
 
-        prices = items.prices[exchange].current;
+        current = items.prices[exchange].current;
+        
+        for (key in current) {
+		    $('#' + exchange + '-' + key).html(formatPrice(current[key]));
+        }
 
-		$('#' + exchange + '-price-spot').html(formatPrice(prices.spotPrice));
-		$('#' + exchange + '-price-buy').html(formatPrice(prices.buyPrice));
-		$('#' + exchange + '-price-sell').html(formatPrice(prices.sellPrice));
-		$('#' + exchange + '-timestamp').html(customDate(prices.timestamp, '#DD#/#MM#/#YY# #hh#:#mm##ampm#'));
+		$('#' + exchange + '-timestamp').html(customDate(current.timestamp, '#DD#/#MM#/#YY# #hh#:#mm##ampm#'));
 
 	    $('#' + exchange + '-price-cluster').removeClass('hide');
 		$('#' + exchange + '-updated-at').removeClass('invisible');
 
         pending.splice(pending.indexOf(exchange), 1);
 
+        if(main_exchange == exchange) {
+	        $('#' + exchange + '-price-cluster').addClass('selected');
+        }
+
         if(!pending.length) {
 		    $('#price-loading').addClass('hide');
+            $("#dolarblue-price-btc").html(formatPrice(items.prices[main_exchange].current["price-spot"] * 
+                                                       items.prices["dolarblue"].current["price-spot"]));
+            current = items.prices[exchange].current;
 		}
 	});
 }

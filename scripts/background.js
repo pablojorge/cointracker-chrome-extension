@@ -7,8 +7,6 @@ var oldChromeVersion = !chrome.runtime,
         'main-exchange': 'coinbase',
 		'poll-frequency': '5',
 		'lookup-amount': '1',
-		'lookup-amount-sll': '1',
-		'lookup-amount-usd': '1',
 		'timestamp': Date.now()
 	},
 	requestTimeout = 1000 * 2;  // 2 seconds
@@ -59,8 +57,6 @@ function checkPrice(exchange, params, forceUpdate) {
 function refreshPrice(exchange, params) {
 	var current = {},
 		lookupAmount = 1,
-		lookupAmountSLL = 1,
-		lookupAmountUSD = 1,
 		requestsPending = 0,
         exchangeHandler = {};
 
@@ -148,14 +144,6 @@ function refreshPrice(exchange, params) {
 		lookupAmount = params['userSettings']['lookup-amount'];
 	}
     
-	if (params['userSettings']['lookup-amount-sll']) {
-		lookupAmountSLL = params['userSettings']['lookup-amount-sll'];
-	}
-    
-	if (params['userSettings']['lookup-amount-usd']) {
-		lookupAmountUSD = params['userSettings']['lookup-amount-usd'];
-	}
-    
     exchangeHandler.coinbase = function () {
         var coinBaseRoot = 'https://coinbase.com',
 	        pricesBuyURL= '/api/v1/prices/buy',
@@ -168,9 +156,9 @@ function refreshPrice(exchange, params) {
             }
         }
 
-    	requestPrice(coinBaseRoot + pricesSpotRateURL, buildHandler('spotPrice', function(response){return JSON.parse(response).amount}));
-	    requestPrice(coinBaseRoot + pricesBuyURL + '?qty="' + lookupAmount + '"', buildHandler('buyPrice', function(response){return JSON.parse(response).total.amount}));
-    	requestPrice(coinBaseRoot + pricesSellURL + '?qty="' + lookupAmount + '"', buildHandler('sellPrice',  function(response){return JSON.parse(response).total.amount}));
+    	requestPrice(coinBaseRoot + pricesSpotRateURL, buildHandler('price-spot', function(response){return JSON.parse(response).amount}));
+	    requestPrice(coinBaseRoot + pricesBuyURL + '?qty="' + lookupAmount + '"', buildHandler('price-buy', function(response){return JSON.parse(response).total.amount}));
+    	requestPrice(coinBaseRoot + pricesSellURL + '?qty="' + lookupAmount + '"', buildHandler('price-sell',  function(response){return JSON.parse(response).total.amount}));
     }
 
     exchangeHandler.mtgox = function () {
@@ -180,9 +168,7 @@ function refreshPrice(exchange, params) {
             _return = JSON.parse(response)["return"];
 
             current = {
-                spotPrice: _return.last.value,
-                buyPrice: _return.buy.value * lookupAmount,
-                sellPrice: _return.sell.value * lookupAmount,
+                "price-spot": _return.last.value,
             }
         }
 
@@ -196,39 +182,34 @@ function refreshPrice(exchange, params) {
             ticker = JSON.parse(response)["ticker"];
 
             current = {
-                spotPrice: ticker.buy,
-                buyPrice: ticker.buy * lookupAmount,
-                sellPrice: ticker.sell * lookupAmount,
+                "price-spot": ticker.buy,
             }
         }
 
     	requestPrice(btceURL, handler);
     }
 
-    exchangeHandler.virwoxbtc = function () {
-        var bestPricesURL = 'https://www.virwox.com/api/json.php?method=getBestPrices&symbols[0]=BTC/SLL';
+    exchangeHandler.bitstamp = function () {
+        var bitstampURL = 'https://www.bitstamp.net/api/ticker/';
 
         function handler(response) {
-            result = JSON.parse(response)["result"];
             current = {
-                spotPrice: result[0].bestSellPrice,
-                buyPrice: result[0].bestSellPrice * lookupAmount,
-                sellPrice: result[0].bestBuyPrice * lookupAmount
+                "price-spot": JSON.parse(response).ask,
             }
         }
 
-    	requestPrice(bestPricesURL, handler);
+    	requestPrice(bitstampURL, handler);
     }
 
-    exchangeHandler.virwoxsll = function () {
-        var bestPricesURL = 'https://www.virwox.com/api/json.php?method=getBestPrices&symbols[0]=USD/SLL';
+    exchangeHandler.virwox = function () {
+        var bestPricesURL = 'https://www.virwox.com/api/json.php?method=getBestPrices&symbols[0]=BTC/SLL&symbols[1]=USD/SLL';
 
         function handler(response) {
             result = JSON.parse(response)["result"];
             current = {
-                spotPrice: result[0].bestSellPrice,
-                buyPrice: lookupAmountSLL / result[0].bestSellPrice,
-                sellPrice: lookupAmountSLL / result[0].bestBuyPrice
+                "price-spot": result[0].bestSellPrice,
+                "price-sll": result[1].bestBuyPrice,
+                "price-usd": result[0].bestSellPrice / result[1].bestBuyPrice,
             }
         }
 
@@ -244,9 +225,26 @@ function refreshPrice(exchange, params) {
             sell = doc.getElementsByTagName("sell")[0].firstChild.data
 
             current = {
-                spotPrice: sell,
-                buyPrice: lookupAmountUSD * sell,
-                sellPrice: lookupAmountUSD * buy
+                "price-spot": sell,
+                "price-sell": buy,
+            }
+        }
+
+    	requestPrice(url, handler);
+    }
+
+    exchangeHandler.dolaroficial = function () {
+        var url = 'http://www.eldolarblue.net/getDolarLibre.php?as=xml';
+
+        function handler(response) {
+            doc = (new window.DOMParser()).parseFromString(response, "text/xml");
+            buy = doc.getElementsByTagName("buy")[0].firstChild.data
+            sell = doc.getElementsByTagName("sell")[0].firstChild.data
+
+            current = {
+                "price-spot": sell,
+                "price-tarjeta": sell * 1.35,
+                "price-paypal": sell * 1.35 * 1.04
             }
         }
 
@@ -271,7 +269,7 @@ function updateBadge(exchange, prices, settings, priceCheckStatus) {
 
 	// update price on badge
 	if (priceCheckStatus != 'failed') {
-        newPrice = prices[exchange].current.spotPrice;
+        newPrice = prices[exchange].current["price-spot"];
 		// format the price
 		var badgePrice = newPrice < 100 ? String(parseFloat(newPrice).toFixed(2)) : String(parseInt(newPrice));  
         chrome.browserAction.setBadgeText({text: badgePrice});
@@ -281,7 +279,7 @@ function updateBadge(exchange, prices, settings, priceCheckStatus) {
 
 	// update badge color
 	if (prices[exchange].previous) {
-        oldPrice = prices[exchange].previous.spotPrice;
+        oldPrice = prices[exchange].previous["price-spot"];
 		var percentChange = (newPrice - oldPrice)/oldPrice * 100
 		console.log("percent change = " + percentChange);
 	}

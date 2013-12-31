@@ -3,8 +3,6 @@ var SETTINGS_KEY = 'userSettings',
             'main-exchange': 'coinbase',
 			'poll-frequency': '5',
 			'lookup-amount': '1',
-            'lookup-amount-sll' : '1',
-            'lookup-amount-usd' : '1',
 			'timestamp': Date.now()
 		};
 
@@ -42,12 +40,6 @@ function initializeForm(properties) {
 					$('#'+key+properties[key]).attr('checked', true);
 					break;
 				case 'lookup-amount':
-					$('#'+key).val(properties[key]);
-					break;
-				case 'lookup-amount-sll':
-					$('#'+key).val(properties[key]);
-					break;
-				case 'lookup-amount-usd':
 					$('#'+key).val(properties[key]);
 					break;
 			}
