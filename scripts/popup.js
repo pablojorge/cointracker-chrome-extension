@@ -2,7 +2,7 @@
 var CURRENT_KEY = 'current',
 	SETTINGS_KEY = 'userSettings';
 
-var exchanges = ["coinbase", "mtgox", "btce", "virwoxbtc", "virwoxsll"],
+var exchanges = ["coinbase", "mtgox", "btce", "virwoxbtc", "virwoxsll", "dolarblue"],
     pending = [];
 
 function init() {
@@ -27,6 +27,7 @@ function updateViewPrices(exchange) {
 	chrome.storage.sync.get(null, function(items){
 		$('.lookup-amount').html(items[SETTINGS_KEY]['lookup-amount']);		
 		$('.lookup-amount-sll').html(items[SETTINGS_KEY]['lookup-amount-sll']);		
+		$('.lookup-amount-usd').html(items[SETTINGS_KEY]['lookup-amount-usd']);		
 
         function formatPrice(number){return Number(number).toFixed(2).replace(/(\d)(?=(\d{3})+\.)/g, '$1,');}
 

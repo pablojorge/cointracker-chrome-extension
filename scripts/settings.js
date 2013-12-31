@@ -4,6 +4,7 @@ var SETTINGS_KEY = 'userSettings',
 			'poll-frequency': '5',
 			'lookup-amount': '1',
             'lookup-amount-sll' : '1',
+            'lookup-amount-usd' : '1',
 			'timestamp': Date.now()
 		};
 
@@ -44,6 +45,9 @@ function initializeForm(properties) {
 					$('#'+key).val(properties[key]);
 					break;
 				case 'lookup-amount-sll':
+					$('#'+key).val(properties[key]);
+					break;
+				case 'lookup-amount-usd':
 					$('#'+key).val(properties[key]);
 					break;
 			}

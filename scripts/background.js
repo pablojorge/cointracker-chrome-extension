@@ -8,6 +8,7 @@ var oldChromeVersion = !chrome.runtime,
 		'poll-frequency': '5',
 		'lookup-amount': '1',
 		'lookup-amount-sll': '1',
+		'lookup-amount-usd': '1',
 		'timestamp': Date.now()
 	},
 	requestTimeout = 1000 * 2;  // 2 seconds
@@ -59,6 +60,7 @@ function refreshPrice(exchange, params) {
 	var current = {},
 		lookupAmount = 1,
 		lookupAmountSLL = 1,
+		lookupAmountUSD = 1,
 		requestsPending = 0,
         exchangeHandler = {};
 
@@ -150,6 +152,10 @@ function refreshPrice(exchange, params) {
 		lookupAmountSLL = params['userSettings']['lookup-amount-sll'];
 	}
     
+	if (params['userSettings']['lookup-amount-usd']) {
+		lookupAmountUSD = params['userSettings']['lookup-amount-usd'];
+	}
+    
     exchangeHandler.coinbase = function () {
         var coinBaseRoot = 'https://coinbase.com',
 	        pricesBuyURL= '/api/v1/prices/buy',
@@ -229,6 +235,24 @@ function refreshPrice(exchange, params) {
     	requestPrice(bestPricesURL, handler);
     }
 
+    exchangeHandler.dolarblue = function () {
+        var url = 'http://www.eldolarblue.net/getDolarBlue.php?as=xml';
+
+        function handler(response) {
+            doc = (new window.DOMParser()).parseFromString(response, "text/xml");
+            buy = doc.getElementsByTagName("buy")[0].firstChild.data
+            sell = doc.getElementsByTagName("sell")[0].firstChild.data
+
+            current = {
+                spotPrice: sell,
+                buyPrice: lookupAmountUSD * sell,
+                sellPrice: lookupAmountUSD * buy
+            }
+        }
+
+    	requestPrice(url, handler);
+    }
+
     exchangeHandler[exchange]();
 
 	// The polling call
@@ -240,7 +264,7 @@ function updateBadge(exchange, prices, settings, priceCheckStatus) {
 	var badgeColor = '#46b8da',
 		percentChange = 0;
 
-    if (settings["main-exchange"] != exchange) {
+    if (!settings || settings["main-exchange"] != exchange) {
         console.log("badge: ignoring update of " + exchange);
         return;
     }
@@ -249,7 +273,7 @@ function updateBadge(exchange, prices, settings, priceCheckStatus) {
 	if (priceCheckStatus != 'failed') {
         newPrice = prices[exchange].current.spotPrice;
 		// format the price
-		var badgePrice = newPrice < 100 ? String(parseFloat(newPrice).toFixed(1)) : String(parseInt(newPrice));  
+		var badgePrice = newPrice < 100 ? String(parseFloat(newPrice).toFixed(2)) : String(parseInt(newPrice));  
         chrome.browserAction.setBadgeText({text: badgePrice});
 	} else {
 		chrome.browserAction.setBadgeText({text: '!'});

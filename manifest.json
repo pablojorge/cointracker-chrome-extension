@@ -29,7 +29,8 @@
 		"https://coinbase.com/",
 		"https://data.mtgox.com/",
         "https://btc-e.com/",
-        "https://www.virwox.com/"
+        "https://www.virwox.com/",
+        "http://www.eldolarblue.net/"
 	],
-	"content_security_policy": "default-src 'self' https://coinbase.com https://data.mtgox.com https://btc-e.com https://www.virwox.com https://ajax.googleapis.com https://themes.googleusercontent.com; style-src 'unsafe-inline' 'self' https://coinbase.com https://fonts.googleapis.com"
+	"content_security_policy": "default-src 'self' https://ajax.googleapis.com https://themes.googleusercontent.com; connect-src https://coinbase.com https://data.mtgox.com https://btc-e.com https://www.virwox.com http://www.eldolarblue.net; style-src 'unsafe-inline' 'self' https://coinbase.com https://fonts.googleapis.com"
 }
