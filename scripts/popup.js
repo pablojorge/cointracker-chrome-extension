@@ -1,14 +1,15 @@
 //adding listener when body is loaded to call init function.
-var CURRENT_KEY = 'current',
-	SETTINGS_KEY = 'userSettings';
+var SETTINGS_KEY = 'userSettings';
 
-var exchanges = ["coinbase", 
-                 "mtgox", 
-                 "btce", 
-                 "bitstamp",
-                 "virwox", 
-                 "dolarblue", 
-                 "dolaroficial"],
+var selectable_exchanges = ["coinbase", 
+                            "mtgox", 
+                            "btce", 
+                            "bitstamp"],
+    other_exchanges = ["virwox", 
+                       "dolarblue", 
+                       "dolaroficial",
+                       "bullionvault"],
+    exchanges = selectable_exchanges.concat(other_exchanges),
     pending = [];
 
 function init() {
@@ -18,9 +19,19 @@ function init() {
 				updateViewPrices(message.exchange);
 			if (message.priceCheckFailed)
 				updateViewError();
+            if (message.mainExchangeSelected)
+                updateViewPrices(message.exchange);
+            if (message.allPricesLoaded || message.mainExchangeSelected)
+                onAllPricesLoaded();
 		});
 
     refreshPrices(false);
+
+    selectable_exchanges.forEach(function(exchange){
+    	$('#' + exchange + '-price-spot').click(function(ev){
+            setMainExchange(exchange);
+        });
+    });
 
 	$('#refresh-link').click(function(ev){
         refreshPrices(true);
@@ -29,12 +40,24 @@ function init() {
     document.getElementById('footer').focus();
 }
 
+function setMainExchange(exchange) {
+    chrome.storage.sync.get(SETTINGS_KEY, function(items){
+	    $('#' + items[SETTINGS_KEY]['main-exchange'] + '-price-cluster').removeClass('selected');
+        items[SETTINGS_KEY]['main-exchange'] = exchange;
+        chrome.storage.sync.set(items, function(){
+		    chrome.runtime.sendMessage({mainExchangeSelected: true, exchange: exchange});
+        });
+    });
+}
+
+function formatPrice(number){
+    return Number(number).toFixed(2).replace(/(\d)(?=(\d{3})+\.)/g, '$1,');
+}
+
 function updateViewPrices(exchange) {
 	chrome.storage.sync.get(null, function(items){
 		main_exchange = items[SETTINGS_KEY]['main-exchange'];		
 		$('.lookup-amount').html(items[SETTINGS_KEY]['lookup-amount']);		
-
-        function formatPrice(number){return Number(number).toFixed(2).replace(/(\d)(?=(\d{3})+\.)/g, '$1,');}
 
         current = items.prices[exchange].current;
         
@@ -54,12 +77,17 @@ function updateViewPrices(exchange) {
         }
 
         if(!pending.length) {
-		    $('#price-loading').addClass('hide');
-            $("#dolarblue-price-btc").html(formatPrice(items.prices[main_exchange].current["price-spot"] * 
-                                                       items.prices["dolarblue"].current["price-spot"]));
-            current = items.prices[exchange].current;
+		    chrome.runtime.sendMessage({allPricesLoaded: true,  params: items});
 		}
 	});
+}
+
+function onAllPricesLoaded(){
+	chrome.storage.sync.get(null, function(items){
+	    $('#price-loading').addClass('hide');
+        $("#dolarblue-price-btc").html(formatPrice(items.prices[main_exchange].current["price-spot"] * 
+                                                   items.prices["dolarblue"].current["price-spot"]));
+    });
 }
 
 function refreshPrices(force) {

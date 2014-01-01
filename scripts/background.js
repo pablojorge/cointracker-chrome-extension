@@ -238,7 +238,6 @@ function refreshPrice(exchange, params) {
 
         function handler(response) {
             doc = (new window.DOMParser()).parseFromString(response, "text/xml");
-            buy = doc.getElementsByTagName("buy")[0].firstChild.data
             sell = doc.getElementsByTagName("sell")[0].firstChild.data
 
             current = {
@@ -332,6 +331,12 @@ chrome.runtime.onMessage.addListener(
 			});
 			return true;
 		}
+
+        if (msg.mainExchangeSelected){
+			chrome.storage.sync.get([PRICES_KEY, SETTINGS_KEY], function(items){
+				updateBadge(msg.exchange, items[PRICES_KEY], items[SETTINGS_KEY]);
+			});
+        }
 
 		if (msg.badgeUpdated){
 			sendResponse({farewell: "goodbye"});
