@@ -87,6 +87,8 @@ function onAllPricesLoaded(){
 	    $('#price-loading').addClass('hide');
         $("#dolarblue-price-btc").html(formatPrice(items.prices[main_exchange].current["price-spot"] * 
                                                    items.prices["dolarblue"].current["price-spot"]));
+        $("#bullionvault-btcxau-ratio").html(Number(items.prices[main_exchange].current["price-spot"] / 
+                                                   items.prices["bullionvault"].current["price-gold"] * 100).toFixed(2));
     });
 }
 

@@ -250,6 +250,32 @@ function refreshPrice(exchange, params) {
     	requestPrice(url, handler);
     }
 
+    exchangeHandler.bullionvault = function () {
+        var url = 'https://live.bullionvault.com/secure/api/v2/view_market_xml.do?considerationCurrency=USD';
+
+        function handler(response) {
+            doc = (new window.DOMParser()).parseFromString(response, "text/xml");
+            prices = { gold: [],
+                       silver: [] }
+            pitches = doc.getElementsByTagName("pitch");
+            for (i=0; i < pitches.length; ++i) {
+                pitch = pitches[i];
+                security = pitch.getAttribute("securityClassNarrative");
+                sellPrice = pitch.getElementsByTagName("sellPrices")[0];
+                price = sellPrice.getElementsByTagName("price")[0];
+                limit = price.getAttribute("limit");
+                prices[security.toLowerCase()].push(limit);
+            }
+
+            current = {
+                "price-gold": Math.min.apply(null, prices.gold) / 32.15,
+                "price-silver": Math.min.apply(null, prices.silver) / 32.15,
+            }
+        }
+
+    	requestPrice(url, handler);
+    }
+
     exchangeHandler[exchange]();
 
 	// The polling call
