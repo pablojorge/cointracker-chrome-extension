@@ -257,14 +257,13 @@ function refreshPrice(exchange, params) {
             doc = (new window.DOMParser()).parseFromString(response, "text/xml");
             prices = { gold: [],
                        silver: [] }
-            pitches = doc.getElementsByTagName("pitch");
-            for (i=0; i < pitches.length; ++i) {
-                pitch = pitches[i];
-                security = pitch.getAttribute("securityClassNarrative");
-                sellPrice = pitch.getElementsByTagName("sellPrices")[0];
-                price = sellPrice.getElementsByTagName("price")[0];
-                limit = price.getAttribute("limit");
-                prices[security.toLowerCase()].push(limit);
+
+            for (security in prices) {
+                expr = '//sellPrices/price[../../@securityClassNarrative="' + security.toUpperCase() + '"]/@limit'
+                node_set = doc.evaluate(expr, doc, null, XPathResult.ANY_TYPE, null)
+                while (limit = node_set.iterateNext()) {
+                    prices[security].push(limit.nodeValue);
+                }
             }
 
             current = {
