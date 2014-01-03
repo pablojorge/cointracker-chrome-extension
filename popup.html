@@ -22,6 +22,12 @@
 				<h3>$<span id="coinbase-price-sell"></span></h3>
 				<small>Sell <span class="lookup-amount">1</span> BTC</small>
 			</div>
+        </div>
+		<div id="coinbase-price-loading" class="row">
+			<div class="col-xs-12"></div>
+		</div>
+		<div id="coinbase-price-error" class="row hide">
+			<div class="col-xs-12"></div>
 		</div>
 		<div class="row">
 			<h1 class="title text-primary col-xs-4"><a href="http://bitcoinwisdom.com/markets/mtgox/btcusd" target="_blank">MtGox Price</a> <span id="mtgox-updated-at" class="text-muted invisible">(<span id="mtgox-timestamp"></span>)</span></h1>
@@ -33,14 +39,32 @@
 				<h3 class="main">$<span id="mtgox-price-spot"></span></h3>
 				<small><a href="http://mtgoxlive.com/orders" target="_blank"><strong>Price of 1BTC</strong></a></small>
 			</div>
+			<div id="mtgox-price-loading">
+                <div class="col-xs-4"></div>
+    		</div>
+		    <div id="mtgox-price-error" class="hide">
+			    <div class="col-xs-4"></div>
+    		</div>
 			<div id="btce-price-cluster" class="col-xs-4 hide">
 				<h3 class="main">$<span id="btce-price-spot"></span></h3>
 				<small><a href="https://btc-e.com/exchange/btc_usd" target="_blank"><strong>Price of 1BTC</strong></a></small>
 			</div>
+			<div id="btce-price-loading"> 
+                <div class="col-xs-4"></div>
+    		</div>
+		    <div id="btce-price-error" class="hide">
+			    <div class="col-xs-4"></div>
+    		</div>
 			<div id="bitstamp-price-cluster" class="col-xs-4 hide">
 				<h3 class="main">$<span id="bitstamp-price-spot"></span></h3>
 				<small><a href="https://www.bitstamp.net/market/order_book/" target="_blank"><strong>Price of 1BTC</strong></a></small>
 			</div>
+			<div id="bitstamp-price-loading"> 
+                <div class="col-xs-4"></div>
+    		</div>
+		    <div id="bitstamp-price-error" class="hide">
+			    <div class="col-xs-4"></div>
+    		</div>
 		</div>
 		<div class="row">
 			<h1 class="title text-primary col-xs-12"><a href="http://bitcoincharts.com/charts/virwoxSLL#rg180ztgSza1gSMAzm1g10za2gSMAzm2g25zxzi1gMACDzv" target="_blank">VirWox Prices</a> <span id="virwox-updated-at" class="text-muted invisible">(Updated <span id="virwox-timestamp"></span>)</span></h1>
@@ -59,6 +83,12 @@
 				<small><strong>Price of 1BTC</strong></small>
 			</div>
 		</div>
+		<div id="virwox-price-loading" class="row">
+			<div class="col-xs-12"></div>
+		</div>
+		<div id="virwox-price-error" class="row hide">
+			<div class="col-xs-12"></div>
+		</div>
 		<div class="row">
 			<h1 class="title text-primary col-xs-12">Dolar Blue <span id="dolarblue-updated-at" class="text-muted invisible">(Updated <span id="dolarblue-timestamp"></span>)</span></h1>
 		</div>
@@ -76,6 +106,11 @@
 				<small><a href="http://www.mercado-bitcoin.com.ar" target="_blank"><strong>Buy 1BTC</strong></a></small>
 			</div>
 		</div>
+		<div id="dolarblue-price-loading" class="row">
+			<div class="col-xs-12"></div>
+		</div>
+		<div id="dolarblue-price-error" class="row hide">
+			<div class="col-xs-12"></div>
 		</div>
 		<div class="row">
 			<h1 class="title text-primary col-xs-12">Dolar Oficial <span id="dolaroficial-updated-at" class="text-muted invisible">(Updated <span id="dolaroficial-timestamp"></span>)</span></h1>
@@ -94,6 +129,12 @@
 				<small>PayPal</small>
 			</div>
 		</div>
+		<div id="dolaroficial-price-loading" class="row">
+			<div class="col-xs-12"></div>
+		</div>
+		<div id="dolaroficial-price-error" class="row hide">
+			<div class="col-xs-12"></div>
+		</div>
 		<div class="row">
 			<h1 class="title text-primary col-xs-12"><a href='https://www.bullionvault.com/gold_market.do#!/orderboard' target="_blank">Gold/Silver</a> <span id="bullionvault-updated-at" class="text-muted invisible">(Updated <span id="bullionvault-timestamp"></span>)</span></h1>
 		</div>
@@ -111,18 +152,11 @@
 				<small>BTC/XAU Ratio</small>
 			</div>
 		</div>
-		<div id="price-loading" class="row">
-			<div class="col-xs-12">
-				<p>Fetching Price Data</p>
-				<div class="progress progress-striped active">
-				  <div class="progress-bar"></div>
-				</div>
-			</div>
+		<div id="bullionvault-price-loading" class="row">
+			<div class="col-xs-12"></div>
 		</div>
-		<div id="price-error" class="row hide">
-			<div class="col-xs-12">
-				<p class="alert alert-danger"><strong>ERROR</strong> There was an error retrieving the current BTC price from CoinBase.</p>
-			</div>
+		<div id="bullionvault-price-error" class="row hide">
+			<div class="col-xs-12"></div>
 		</div>
 	</section>
 	<hr />

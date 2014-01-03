@@ -10,6 +10,16 @@ var selectable_exchanges = ["coinbase",
                        "dolaroficial",
                        "bullionvault"],
     exchanges = selectable_exchanges.concat(other_exchanges),
+    exchange_desc = {
+        coinbase: "Coinbase",
+        mtgox: "MtGox",
+        btce: "BTC-e",
+        bitstamp: "Bitstamp",
+        virwox: "VirWox",
+        dolarblue: "Dolar Blue",
+        dolaroficial: "Dolar Oficial",
+        bullionvault: "Bullion Vault"
+    }
     pending = [];
 
 function init() {
@@ -18,7 +28,7 @@ function init() {
 			if (message.priceUpdated || message.priceUnchanged)
 				updateViewPrices(message.exchange);
 			if (message.priceCheckFailed)
-				updateViewError();
+				updateViewError(message.exchange);
             if (message.mainExchangeSelected)
                 updateViewPrices(message.exchange);
             if (message.allPricesLoaded || message.mainExchangeSelected)
@@ -31,6 +41,20 @@ function init() {
     	$('#' + exchange + '-price-spot').click(function(ev){
             setMainExchange(exchange);
         });
+    });
+
+    exchanges.forEach(function(exchange){
+        $('#' + exchange + '-price-loading > div').append($(
+            '<div class="progress progress-striped active">' + 
+              '<div class="progress-bar"></div>' + 
+            '</div>'
+        ));
+        $('#' + exchange + '-price-error > div').append($(
+		    '<p class="alert alert-danger">' +
+              '<strong>ERROR</strong> ' + 
+              'There was an error retrieving the current BTC price from ' + exchange_desc[exchange] + '.' + 
+            '</p>'
+        ));
     });
 
 	$('#refresh-link').click(function(ev){
@@ -67,6 +91,7 @@ function updateViewPrices(exchange) {
 
 		$('#' + exchange + '-timestamp').html(customDate(current.timestamp, '#DD#/#MM#/#YY# #hh#:#mm##ampm#'));
 
+	    $('#' + exchange + '-price-loading').addClass('hide');
 	    $('#' + exchange + '-price-cluster').removeClass('hide');
 		$('#' + exchange + '-updated-at').removeClass('invisible');
 
@@ -84,7 +109,6 @@ function updateViewPrices(exchange) {
 
 function onAllPricesLoaded(){
 	chrome.storage.sync.get(null, function(items){
-	    $('#price-loading').addClass('hide');
         $("#dolarblue-price-btc").html(formatPrice(items.prices[main_exchange].current["price-spot"] * 
                                                    items.prices["dolarblue"].current["price-spot"]));
         $("#bullionvault-btcxau-ratio").html(Number(items.prices[main_exchange].current["price-spot"] / 
@@ -93,12 +117,12 @@ function onAllPricesLoaded(){
 }
 
 function refreshPrices(force) {
-    $('#price-loading').removeClass('hide');
-
 	chrome.runtime.getBackgroundPage(function(bg) {
 		chrome.storage.sync.get(SETTINGS_KEY, function(items){
             exchanges.forEach(function(exchange){
+                $('#' + exchange + '-price-loading').removeClass('hide');
 	            $('#' + exchange + '-price-cluster').addClass('hide');
+	            $('#' + exchange + '-price-error').addClass('hide');
 		        $('#' + exchange + '-updated-at').addClass('invisible');
     			bg.checkPrice(exchange, items, force);
                 pending.push(exchange);
@@ -107,10 +131,10 @@ function refreshPrices(force) {
     });
 }
 
-function updateViewError() {
-	$('#price-cluster, #price-loading').addClass('hide');
-	$('#price-error').removeClass('hide');
-	$('#updated-at').addClass('invisible');
+function updateViewError(exchange) {
+	$('#' + exchange + '-price-cluster, #' + exchange + '-price-loading').addClass('hide');
+	$('#' + exchange + '-price-error').removeClass('hide');
+	$('#' + exchange + '-updated-at').addClass('invisible');
 }
 
 // UTILITIES

@@ -68,12 +68,17 @@ function refreshPrice(exchange, params) {
 
 		function handleSuccess(response) {
 			window.clearTimeout(abortTimerId);
-            handler(response);
+		    try {
+                handler(response);
+            } catch(e) {
+			    console.error(chrome.i18n.getMessage(exchange + "_check_exception", e));
+			    chrome.runtime.sendMessage({priceCheckFailed: true, exchange: exchange});
+            }
 		}
 
 		function handleError() {
 			window.clearTimeout(abortTimerId);
-			chrome.runtime.sendMessage({priceCheckFailed: true});
+			chrome.runtime.sendMessage({priceCheckFailed: true, exchange: exchange});
 		}
 
 		try {
@@ -103,7 +108,7 @@ function refreshPrice(exchange, params) {
 			xhr.open( "GET", theUrl, true );
 			xhr.send( null );
 		} catch(e) {
-			console.error(chrome.i18n.getMessage("coinbase_check_exception", e));
+			console.error(chrome.i18n.getMessage(exchange + "_check_exception", e));
 			handleError();
 		}
 	}
@@ -286,7 +291,7 @@ function updateBadge(exchange, prices, settings, priceCheckStatus) {
 	var badgeColor = '#46b8da',
 		percentChange = 0;
 
-    if (!settings || settings["main-exchange"] != exchange) {
+    if (settings["main-exchange"] != exchange) {
         console.log("badge: ignoring update of " + exchange);
         return;
     }
@@ -297,24 +302,25 @@ function updateBadge(exchange, prices, settings, priceCheckStatus) {
 		// format the price
 		var badgePrice = newPrice < 100 ? String(parseFloat(newPrice).toFixed(2)) : String(parseInt(newPrice));  
         chrome.browserAction.setBadgeText({text: badgePrice});
+
+	    // update badge color
+	    if (prices[exchange].previous) {
+            oldPrice = prices[exchange].previous["price-spot"];
+		    var percentChange = (newPrice - oldPrice)/oldPrice * 100
+		    console.log("percent change = " + percentChange);
+	    }
+
+	    if (percentChange < -0.25 || priceCheckStatus == 'failed') { 
+            badgeColor = '#d43f3a'; 
+        } else if (percentChange > 0.25) { 
+            badgeColor = '#4cae4c'; 
+        }
+
+	    chrome.browserAction.setBadgeBackgroundColor({color: badgeColor});
+
 	} else {
 		chrome.browserAction.setBadgeText({text: '!'});
 	}
-
-	// update badge color
-	if (prices[exchange].previous) {
-        oldPrice = prices[exchange].previous["price-spot"];
-		var percentChange = (newPrice - oldPrice)/oldPrice * 100
-		console.log("percent change = " + percentChange);
-	}
-
-	if (percentChange < -0.25 || priceCheckStatus == 'failed') { 
-        badgeColor = '#d43f3a'; 
-    } else if (percentChange > 0.25) { 
-        badgeColor = '#4cae4c'; 
-    }
-
-	chrome.browserAction.setBadgeBackgroundColor({color: badgeColor});
 
 	chrome.runtime.sendMessage({badgeUpdated: true});
 }
@@ -341,7 +347,9 @@ chrome.runtime.onMessage.addListener(
 
 		// if the AJAX request failed
 		if (msg.priceCheckFailed){
-			updateBadge(null,null,null,'failed');
+			chrome.storage.sync.get([PRICES_KEY, SETTINGS_KEY], function(items){
+				updateBadge(msg.exchange, items[PRICES_KEY], items[SETTINGS_KEY], 'failed');
+            });
 		}
 
 		if (msg.priceUnchanged){
