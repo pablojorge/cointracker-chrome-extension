@@ -63,44 +63,45 @@ function refreshPrice(exchange, params) {
 	function requestPrice(theUrl, handler) {
 		var xhr = new XMLHttpRequest();
 		var abortTimerId = window.setTimeout(function() {
+            console.log("request to '" + theUrl + "' timed out, aborting");
 			xhr.abort();  // synchronously calls onreadystatechange
 		}, requestTimeout);
 
 		function handleSuccess(response) {
 			window.clearTimeout(abortTimerId);
-		    try {
-                handler(response);
-            } catch(e) {
-			    console.error(chrome.i18n.getMessage(exchange + "_check_exception", e));
-			    chrome.runtime.sendMessage({priceCheckFailed: true, exchange: exchange});
-            }
+            handler(response);
 		}
 
-		function handleError() {
+		function handleError(error) {
 			window.clearTimeout(abortTimerId);
+			console.error("error making request to " + exchange + ": " + error);
 			chrome.runtime.sendMessage({priceCheckFailed: true, exchange: exchange});
 		}
 
 		try {
 			xhr.onreadystatechange = function() {
-				if (xhr.readyState < 4 || xhr.status == 0) {
+				if (this.readyState < XMLHttpRequest.DONE) { 
 					return;
 				}
 
 				requestsPending--;
 
-				if (xhr.status === 200 || xhr.status === 304) {
-					handleSuccess(xhr.responseText);
-					return;
-				}
-
-				console.log(xhr);
-
-				handleError();
+				if (this.status === 200 || this.status === 304) {
+                    try {
+    					handleSuccess(this.responseText);
+                        if (!requestsPending)
+                            publishPrices();
+                    } catch(e) {
+                        handleError(e);
+                    }
+				} else {
+				    console.log(this);
+    				handleError();
+                }
 			};
 
 			xhr.onerror = function(error) {
-				handleError();
+				handleError(error);
 			};
 
 			requestsPending++;
@@ -109,39 +110,28 @@ function refreshPrice(exchange, params) {
 			xhr.send( null );
 		} catch(e) {
 			console.error(chrome.i18n.getMessage(exchange + "_check_exception", e));
-			handleError();
+			handleError(e);
 		}
 	}
 
 	// polling function 
-	function checkRequests(){
-		if(requestsPending == 0){
+	function publishPrices(){
+		current.timestamp = Date.now();
 
-			window.clearInterval(pollRequests); //Clear Interval via ID for single time execution
+		// cache the previous price
+		chrome.storage.sync.get(PRICES_KEY, function(items){
+            if (items.prices===undefined)
+                items.prices={}
+            if (items.prices[exchange]===undefined)
+                items.prices[exchange]={}
+            items.prices[exchange].previous = items.prices[exchange].current;
+            items.prices[exchange].current = current;
 
-			if(current){
-				current.timestamp = Date.now();
-
-				// cache the previous price
-				chrome.storage.sync.get(PRICES_KEY, function(items){
-                    if (items.prices===undefined)
-                        items.prices={}
-                    if (items.prices[exchange]===undefined)
-                        items.prices[exchange]={}
-                    items.prices[exchange].previous = items.prices[exchange].current;
-                    items.prices[exchange].current = current;
-
-					// save the new price data and wait for the messaging callback
-					chrome.storage.sync.set(items, function(){
-						chrome.runtime.sendMessage({priceUpdated: true, exchange: exchange});
-					});
-
-				});
-
-			} else {
-				chrome.runtime.sendMessage({priceCheckFailed: true, exchange: exchange});
-			}
-		}
+			// save the new price data and wait for the messaging callback
+			chrome.storage.sync.set(items, function(){
+				chrome.runtime.sendMessage({priceUpdated: true, exchange: exchange});
+			});
+		});
 	}
 
 	// trigger the price calls
@@ -281,9 +271,6 @@ function refreshPrice(exchange, params) {
     }
 
     exchangeHandler[exchange]();
-
-	// The polling call
-	var pollRequests = window.setInterval(function(){ checkRequests() }, 100);
 }
 
 // Updates the badge UI

@@ -40,7 +40,9 @@ function init() {
     selectable_exchanges.forEach(function(exchange){
     	$('#' + exchange + '-price-spot').click(function(ev){
             setMainExchange(exchange);
-        });
+        }).attr("title", "Click here to set " + 
+                         exchange_desc[exchange] + 
+                         " as the main exchange");
     });
 
     exchanges.forEach(function(exchange){
@@ -59,6 +61,10 @@ function init() {
 
 	$('#refresh-link').click(function(ev){
         refreshPrices(true);
+    });
+
+    $("a").attr("title", function(){
+        return $(this).attr("href");
     });
 
     document.getElementById('footer').focus();
