@@ -1,14 +1,5 @@
 // Legacy support for pre-event-pages.
 var oldChromeVersion = !chrome.runtime,
-	// keys for accessing local storage
-	PRICES_KEY = 'prices',
-	SETTINGS_KEY = 'userSettings',
-	SETTINGS_DEFAULTS = {
-        'main-exchange': 'coinbase',
-		'poll-frequency': '5',
-		'lookup-amount': '1',
-		'timestamp': Date.now()
-	},
 	requestTimeout = 1000 * 2;  // 2 seconds
 
 function onInit() {
@@ -283,16 +274,21 @@ function updateBadge(exchange, prices, settings, priceCheckStatus) {
         return;
     }
 
+    current = prices[exchange].current;
+    previous = prices[exchange].previous;
+
 	// update price on badge
 	if (priceCheckStatus != 'failed') {
-        newPrice = prices[exchange].current["price-spot"];
+        newPrice = current["price-spot"];
 		// format the price
 		var badgePrice = newPrice < 100 ? String(parseFloat(newPrice).toFixed(2)) : String(parseInt(newPrice));  
         chrome.browserAction.setBadgeText({text: badgePrice});
+        chrome.browserAction.setTitle({title: "Taken from " + exchange_desc[exchange] + 
+                                              " at " + customDate(current.timestamp, '#hhh#:#mm#')});
 
 	    // update badge color
-	    if (prices[exchange].previous) {
-            oldPrice = prices[exchange].previous["price-spot"];
+	    if (previous) {
+            oldPrice = previous["price-spot"];
 		    var percentChange = (newPrice - oldPrice)/oldPrice * 100
 		    console.log("percent change = " + percentChange);
 	    }
