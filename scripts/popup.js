@@ -73,6 +73,7 @@ function updateViewPrices(exchange) {
 		    $('#' + exchange + '-' + key).html(formatPrice(current[key]));
         }
 
+		$('#' + exchange + '-uact').html(current.uact);
 		$('#' + exchange + '-timestamp').html(customDate(current.timestamp, '#DD#/#MM#/#YY# #hhh#:#mm#'));
 
 	    $('#' + exchange + '-price-loading').addClass('hide');

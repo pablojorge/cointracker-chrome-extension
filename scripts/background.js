@@ -1,6 +1,6 @@
 // Legacy support for pre-event-pages.
 var oldChromeVersion = !chrome.runtime,
-	requestTimeout = 1000 * 2;  // 2 seconds
+	requestTimeout = 1000 * 10;  // 10 seconds
 
 function onInit() {
 	chrome.storage.sync.get(SETTINGS_KEY, function(items){
@@ -202,7 +202,7 @@ function refreshPrice(exchange, params) {
     	requestPrice(bestPricesURL, handler);
     }
 
-    exchangeHandler.dolarblue = function () {
+    exchangeHandler.dolarblue_old = function () {
         var url = 'http://www.eldolarblue.net/getDolarBlue.php?as=xml';
 
         function handler(response) {
@@ -219,7 +219,7 @@ function refreshPrice(exchange, params) {
     	requestPrice(url, handler);
     }
 
-    exchangeHandler.dolaroficial = function () {
+    exchangeHandler.dolaroficial_old = function () {
         var url = 'http://www.eldolarblue.net/getDolarLibre.php?as=xml';
 
         function handler(response) {
@@ -230,6 +230,54 @@ function refreshPrice(exchange, params) {
                 "price-spot": sell,
                 "price-tarjeta": sell * 1.35,
                 "price-paypal": sell * 1.35 * 1.04
+            }
+        }
+
+    	requestPrice(url, handler);
+    }
+
+    function parseAmbito(response) {
+        resp = $(response);
+        buy = resp.find("#compra > big").text();
+        sell = resp.find("#venta > big").text();
+        uact = resp.find(".uact > b").map(function(){
+            return $.trim($(this).text());
+        }).get().join(" ");
+
+        return { 
+            buy: parseFloat(buy.replace(",",".")),
+            sell: parseFloat(sell.replace(",",".")),
+            uact: uact
+        };
+    }
+
+    exchangeHandler.dolarblue = function () {
+        var url = 'http://www.ambito.com/economia/mercados/monedas/dolar/info/?ric=ARSB=';
+
+        function handler(response) {
+            prices = parseAmbito(response);
+
+            current = {
+                "price-spot": prices.sell,
+                "price-sell": prices.buy,
+                "uact": prices.uact,
+            }
+        }
+
+    	requestPrice(url, handler);
+    }
+
+    exchangeHandler.dolaroficial = function () {
+        var url = 'http://www.ambito.com/economia/mercados/monedas/dolar/info/?ric=ARSSCBCRA';
+
+        function handler(response) {
+            prices = parseAmbito(response);
+
+            current = {
+                "price-spot": prices.sell,
+                "price-tenencia": prices.sell * 1.20,
+                "price-tarjeta": prices.sell * 1.35,
+                "uact": prices.uact,
             }
         }
 
